@@ -72,14 +72,23 @@ sub main {
 
     # do stuff here
     my $all_releases = $mcpan->all('releases');
+    my %details      = ();
     my $a = 0;
+
+    local $Data::Dumper::Sortkeys = 1;
+    local $Data::Dumper::Indent = 1;
     while ( my $release = $all_releases->next ) {
         my $url = $release->data->{resources}{repository}{url};
         next if !$url || $url !~ /github[.]com/;
         my ($user, $repo) = github_url_to_user_repo($url);
-        next if $user;
-        print join "\t", $url, $user, $repo, "\n";
-        last if $a++ > 49;
+
+        $details{$user}{$repo} = {
+            mtime => $release->stat->{mtime},
+            date  => $release->date,
+        };
+        die Dumper \%details if $a == 10;
+        sleep 1 if $a++ % 50 == 49;
+        print "$a\n" if $a % 10 == 0;
     }
 
     return;
