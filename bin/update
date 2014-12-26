@@ -34,16 +34,12 @@ our $VERSION = version->new('0.0.1');
 my ($name)   = $PROGRAM_NAME =~ m{^.*/(.*?)$}mxs;
 
 my %option = (
-    out     => undef,
+    sleep   => 100,
     verbose => 0,
     man     => 0,
     help    => 0,
     VERSION => 0,
 );
-
-if ( !@ARGV ) {
-    pod2usage( -verbose => 1 );
-}
 
 main();
 exit 0;
@@ -52,7 +48,7 @@ sub main {
     Getopt::Long::Configure('bundling');
     GetOptions(
         \%option,
-        'out|o=s',
+        'sleep|s=i',
         'verbose|v+',
         'man',
         'help',
@@ -71,13 +67,15 @@ sub main {
     }
 
     # do stuff here
-    my $all_releases = $mcpan->all('releases');
-    my %details      = ();
-    my $a = 0;
+    my $all_releases   = $mcpan->all('releases');
+    my %details        = ();
+    my $github_modules = 0;
+    my $modules        = 0;
 
     local $Data::Dumper::Sortkeys = 1;
     local $Data::Dumper::Indent = 1;
     while ( my $release = $all_releases->next ) {
+        $modules++;
         my $url = $release->data->{resources}{repository}{url};
         next if !$url || $url !~ /github[.]com/;
         my ($user, $repo) = github_url_to_user_repo($url);
@@ -86,10 +84,20 @@ sub main {
             mtime => $release->stat->{mtime},
             date  => $release->date,
         };
-        die Dumper \%details if $a == 10;
-        sleep 1 if $a++ % 50 == 49;
-        print "$a\n" if $a % 10 == 0;
+
+        if ( $github_modules % 100 == 0 ) {
+            # stop memory usage growing out of controll.
+            $mcpan->{request}{_user_ua}{mechua}{page_stack} = [];
+
+            warn "$github_modules\n" if $option{verbose};
+
+            # git the CPU a reset
+            sleep 1;
+        }
     }
+    print Dumper \%details;
+    warn "Total Modules: $modules\n";
+    warn "On Github:     $github_modules\n";
 
     return;
 }
