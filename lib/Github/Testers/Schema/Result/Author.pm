@@ -31,6 +31,13 @@ __PACKAGE__->add_columns(
         is_nullable       => 0,
         original          => { data_type => 'varchar' },
     },
+    'created' => {
+        data_type         => 'datetime',
+        default_value     => undef,
+        size              => undef,
+        is_auto_increment => 0,
+        is_nullable       => 0,
+    },
     'name' => {
         data_type         => 'text',
         default_value     => undef,

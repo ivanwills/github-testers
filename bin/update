@@ -80,8 +80,6 @@ sub main {
         $schema->deploy({ add_drop_table => 1 });
     }
 
-    local $Data::Dumper::Sortkeys = 1;
-    local $Data::Dumper::Indent = 1;
     while ( my $release = $all_releases->next ) {
         $modules++;
         my $url = $release->data->{resources}{repository}{url};
@@ -92,6 +90,15 @@ sub main {
             mtime => $release->stat->{mtime},
             date  => $release->date,
         };
+        my $author = $schema->resultset('Author')->find({pause_id => $user});
+        if ( $author ) {
+            $schema->resultset('Author')->new({
+                pause_id => $user,
+                created  => DateTime::now,
+                name     => $release->data->{name},
+                email    => $release->data->{email},
+            });
+        }
 
         if ( $github_modules % 100 == 0 ) {
             # stop memory usage growing out of controll.
@@ -103,6 +110,8 @@ sub main {
             sleep 1;
         }
     }
+    local $Data::Dumper::Sortkeys = 1;
+    local $Data::Dumper::Indent = 1;
     print Dumper \%details;
     warn "Total Modules: $modules\n";
     warn "On Github:     $github_modules\n";
