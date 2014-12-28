@@ -70,6 +70,7 @@ __PACKAGE__->add_columns(
 );
 
 __PACKAGE__->set_primary_key('repository_id');
+__PACKAGE__->add_unique_constraint(reqp_uniq => [qw/github_user repository_name/]);
 
 __PACKAGE__->has_many(
     'authors' => (

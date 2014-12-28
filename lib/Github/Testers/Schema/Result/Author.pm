@@ -10,7 +10,7 @@ use strict;
 use warnings;
 use base qw/DBIx::Class::Core/;
 
-__PACKAGE__->load_components('Core');
+__PACKAGE__->load_components('InflateColumn::DateTime', 'Core');
 
 __PACKAGE__->table('author');
 
@@ -38,14 +38,6 @@ __PACKAGE__->add_columns(
         is_auto_increment => 0,
         is_nullable       => 0,
     },
-    'name' => {
-        data_type         => 'text',
-        default_value     => undef,
-        size              => 255,
-        is_auto_increment => 0,
-        is_nullable       => 0,
-        original          => { data_type => 'varchar' },
-    },
     'email' => {
         data_type         => 'text',
         default_value     => undef,
@@ -57,6 +49,7 @@ __PACKAGE__->add_columns(
 );
 
 __PACKAGE__->set_primary_key('author_id');
+__PACKAGE__->add_unique_constraint(pause_id_uniq => ['pause_id']);
 
 1;
 
