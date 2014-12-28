@@ -92,13 +92,34 @@ sub main {
             date  => $release->date,
         };
         my $author = $schema->resultset('Author')->search({pause_id => $release->data->{author}});
-        if ( !$author ) {
-            $author = $schema->resultset('Author')->create({
+        if ( !$author || $author->count == 0 ) {
+            $author = $schema->resultset('Author')->create(
                 pause_id => $release->data->{author},
-                created  => DateTime->now,
+                created  => DateTime->now(),
                 email    => $release->data->{metadata}{author},
+            );
+            $author->insert;
+        }
+        else {
+            $author = $author->first;
+        }
+        my $repository = $schema->resultset('Repository')->search({ github_user => $user, repository_name => $repo });
+        if ( !$repository || $repository->count == 0 ) {
+            $repository = $schema->resultset('Repository')->create({
+                github_user     => $user,
+                repository_name => $repo,
+                author_id       => $author->author_id,
+                created         => DateTime->now(),
+                last_updated    => DateTime->now(),
+                last_release    => DateTime->new($release->stat->{mtime}),
             });
-            $author->save;
+            $repository->insert;
+        }
+        else {
+            die Dumper $repository->count;
+            $repository = $repository->first;
+            $repository->last_updated = DateTime->now();
+            $repository->update;
         }
 
         if ( ++$github_modules % 1000 == 0 ) {
