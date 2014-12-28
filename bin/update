@@ -18,6 +18,7 @@ use WWW::Mechanize::Cached;
 use HTTP::Tiny::Mech;
 use MetaCPAN::Client;
 use PAUSE::Packages 0.02;
+use DateTime;
 use Github::Testers::Schema;
 
 my $mcpan = MetaCPAN::Client->new(
@@ -90,17 +91,17 @@ sub main {
             mtime => $release->stat->{mtime},
             date  => $release->date,
         };
-        my $author = $schema->resultset('Author')->find({pause_id => $user});
-        if ( $author ) {
-            $schema->resultset('Author')->new({
-                pause_id => $user,
-                created  => DateTime::now,
-                name     => $release->data->{name},
-                email    => $release->data->{email},
+        my $author = $schema->resultset('Author')->search({pause_id => $release->data->{author}});
+        if ( !$author ) {
+            $author = $schema->resultset('Author')->create({
+                pause_id => $release->data->{author},
+                created  => DateTime->now,
+                email    => $release->data->{metadata}{author},
             });
+            $author->save;
         }
 
-        if ( $github_modules % 100 == 0 ) {
+        if ( ++$github_modules % 1000 == 0 ) {
             # stop memory usage growing out of controll.
             $mcpan->{request}{_user_ua}{mechua}{page_stack} = [];
 
