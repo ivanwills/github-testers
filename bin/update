@@ -90,12 +90,16 @@ sub main {
         next if !$url || $url !~ /github[.]com/;
         my ($user, $repo) = github_url_to_user_repo($url);
 
-        next if $seen{"$user/$repo"} && version->new($seen{"$user/$repo"}) < version->new($release->data->{metadata}{version});
+        next if !$user || !$repo
+            || (
+                $seen{"$user/$repo"}
+                && version->new($seen{"$user/$repo"}) < version->new($release->data->{metadata}{version})
+            );
         $seen{"$user/$repo"} = $release->data->{metadata}{version};
 
         $details{$user}{$repo} = {
             mtime => $release->stat->{mtime},
-            date  => $release->date,
+            date  => $release->data->{date},
         };
 
         my $author = $schema->resultset('Author')->search({pause_id => $release->data->{author}});
