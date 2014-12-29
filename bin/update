@@ -93,11 +93,11 @@ sub main {
         };
         my $author = $schema->resultset('Author')->search({pause_id => $release->data->{author}});
         if ( !$author || $author->count == 0 ) {
-            $author = $schema->resultset('Author')->create(
+            $author = $schema->resultset('Author')->create({
                 pause_id => $release->data->{author},
                 created  => DateTime->now(),
                 email    => $release->data->{metadata}{author},
-            );
+            });
             $author->insert;
         }
         else {
@@ -111,18 +111,19 @@ sub main {
                 author_id       => $author->author_id,
                 created         => DateTime->now(),
                 last_updated    => DateTime->now(),
-                last_release    => DateTime->new($release->stat->{mtime}),
+                last_release    => DateTime->from_epoch( epoch => $release->stat->{mtime} ),
             });
             $repository->insert;
         }
         else {
-            die Dumper $repository->count;
             $repository = $repository->first;
-            $repository->last_updated = DateTime->now();
-            $repository->update;
+            if ( $repository->last_change ) {
+                $repository->last_updated(DateTime->now());
+                $repository->update;
+            }
         }
 
-        if ( ++$github_modules % 1000 == 0 ) {
+        if ( ++$github_modules % 100 == 0 ) {
             # stop memory usage growing out of controll.
             $mcpan->{request}{_user_ua}{mechua}{page_stack} = [];
 
