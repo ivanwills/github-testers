@@ -69,28 +69,35 @@ sub main {
     }
 
     # do stuff here
-    my $all_releases   = $mcpan->all('releases');
-    my %details        = ();
-    my $github_modules = 0;
-    my $modules        = 0;
-    my $db_file        = 'testers.db';
-    my $db_file_exists = -s $db_file;
-    my $schema         = Github::Testers::Schema->connect("dbi:SQLite:$db_file");
+    my $all_distributions = $mcpan->all('distributions');
+    my %details           = ();
+    my $github_modules    = 0;
+    my $modules           = 0;
+    my $db_file           = 'testers.db';
+    my $schema            = Github::Testers::Schema->connect("dbi:SQLite:$db_file");
+    my %seen;
 
-    if ( !$db_file_exists ) {
+    if ( !( my $res = eval { $schema->resultset('Author')->count || 1 } ) ) {
         $schema->deploy({ add_drop_table => 1 });
     }
 
-    while ( my $release = $all_releases->next ) {
-        $modules++;
+    while ( my $dist = $all_distributions->next ) {
+        sleep 1 if $modules++ % 1000 == 0;
+        my $release = eval { $mcpan->release($dist->data->{name}) };
+        next if !$release;
+
         my $url = $release->data->{resources}{repository}{url};
         next if !$url || $url !~ /github[.]com/;
         my ($user, $repo) = github_url_to_user_repo($url);
+
+        next if $seen{"$user/$repo"} && version->new($seen{"$user/$repo"}) < version->new($release->data->{metadata}{version});
+        $seen{"$user/$repo"} = $release->data->{metadata}{version};
 
         $details{$user}{$repo} = {
             mtime => $release->stat->{mtime},
             date  => $release->date,
         };
+
         my $author = $schema->resultset('Author')->search({pause_id => $release->data->{author}});
         if ( !$author || $author->count == 0 ) {
             $author = $schema->resultset('Author')->create({
@@ -127,7 +134,7 @@ sub main {
             # stop memory usage growing out of controll.
             $mcpan->{request}{_user_ua}{mechua}{page_stack} = [];
 
-            warn "$github_modules\n" if $option{verbose};
+            warn "$github_modules of $modules\n" if $option{verbose};
 
             # git the CPU a reset
             sleep 1;
