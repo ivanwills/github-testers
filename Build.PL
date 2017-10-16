@@ -23,7 +23,7 @@ my $builder = Module::Build->new(
     },
     build_requires => {
         'Dancer::Test'     => '1.3132',
-        'Test::More'       => 0,
+        'Test::More'       => '0.88',
         'Test::NoWarnings' => 0,
     },
     add_to_cleanup     => [ 'Github-Testers-*' ],
